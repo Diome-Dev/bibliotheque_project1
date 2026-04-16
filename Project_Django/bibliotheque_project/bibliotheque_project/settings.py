@@ -4,14 +4,18 @@ Django settings for bibliotheque_project project.
 
 from pathlib import Path
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-dm8_$e_)fde9+jt)7ip0@ug&&o!$-8v#dv7dj^r*b$3#7@(!i+'
+# 🔐 Sécurité
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*']  # tu peux restreindre plus tard
+
+
 
 # ─── APPLICATIONS ───────────────────────────────────────────
 INSTALLED_APPS = [
@@ -21,14 +25,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # externes
     'rest_framework',
     'django_filters',
+
+    # locales
     'api',
 ]
 
 # ─── MIDDLEWARE ─────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+
+    # pour Vercel / production
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,28 +71,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bibliotheque_project.wsgi.application'
 
 # ─── BASE DE DONNÉES ────────────────────────────────────────
-# Si DATABASE_URL est définie (Vercel), utilise PostgreSQL
-# Sinon, utilise SQLite en local
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    import urllib.parse as urlparse
-    url = urlparse.urlparse(DATABASE_URL)
     DATABASES = {
-        'default': {
-            'ENGINE':   'django.db.backends.postgresql',
-            'NAME':     url.path[1:],
-            'USER':     url.username,
-            'PASSWORD': url.password,
-            'HOST':     url.hostname,
-            'PORT':     url.port or 5432,
-        }
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
 else:
+    # fallback local
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME':   BASE_DIR / 'db.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
@@ -94,13 +101,16 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ─── INTERNATIONALISATION ───────────────────────────────────
 LANGUAGE_CODE = 'fr-fr'
-TIME_ZONE     = 'Africa/Dakar'
-USE_I18N      = True
-USE_TZ        = True
+TIME_ZONE = 'Africa/Dakar'
+USE_I18N = True
+USE_TZ = True
 
 # ─── FICHIERS STATIQUES ─────────────────────────────────────
-STATIC_URL  = '/static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise config
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ─── CLÉ PRIMAIRE PAR DÉFAUT ────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
